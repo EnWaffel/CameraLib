@@ -1,22 +1,36 @@
 package de.enwaffel.mc.camlib.api;
 
-import de.enwaffel.mc.camlib.CamLib;
-import de.enwaffel.mc.camlib.impl.v1_20_R3.TimelineImpl;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 public interface CameraLibrary {
 
     static CameraLibrary getInstance() {
-        if (CamLib.getInstance() == null) {
-            CamLib.init();
+        try {
+            Class<? extends CameraLibrary> clazz = (Class<? extends CameraLibrary>) Class.forName("de.enwaffel.mc.camlib.CamLib");
+            Method instanceMethod = clazz.getDeclaredMethod("getInstance");
+            Object instance = instanceMethod.invoke(null);
+            if (instance == null) {
+                clazz.getDeclaredMethod("init").invoke(null);
+                return (CameraLibrary) instanceMethod.invoke(null);
+            }
+            return (CameraLibrary) instance;
+        } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
-        return CamLib.getInstance();
     }
 
     static void disable() {
-        CamLib.disable();
+        Class<? extends CameraLibrary> clazz = null;
+        try {
+            clazz = (Class<? extends CameraLibrary>) Class.forName("de.enwaffel.mc.camlib.CamLib");
+            clazz.getDeclaredMethod("disable").invoke(null);
+        } catch (ClassNotFoundException | InvocationTargetException | IllegalAccessException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    TimelineImpl.Builder newTimeline();
+    Timeline.Builder newTimeline();
 
     Animation.Builder newAnimation();
 

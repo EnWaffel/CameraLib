@@ -11,7 +11,6 @@ import de.enwaffel.mc.camlib.impl.v1_20_R3.TimelineImpl;
 import de.enwaffel.mc.camlib.nms.NMS;
 import de.enwaffel.mc.camlib.nms.NMSVersion;
 import io.netty.channel.ChannelHandler;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.InvocationTargetException;
