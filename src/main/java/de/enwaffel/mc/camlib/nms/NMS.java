@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 public interface NMS {
     void sendPlayerPositionPacket(Player player, float x, float y, float z, float yaw, float pitch);
     PlayerConnection getPlayerConnection(Player player);
+    void disable();
 
     // For Paper servers
     void disableMovementPackets(Player player);

@@ -3,14 +3,12 @@ package de.enwaffel.mc.camlib;
 import aurelienribon.tweenengine.Tween;
 import aurelienribon.tweenengine.TweenAccessor;
 import aurelienribon.tweenengine.TweenManager;
-import de.enwaffel.mc.camlib.api.Animatable;
-import de.enwaffel.mc.camlib.api.Animation;
-import de.enwaffel.mc.camlib.api.CameraLibrary;
-import de.enwaffel.mc.camlib.api.Timeline;
+import de.enwaffel.mc.camlib.api.*;
 import de.enwaffel.mc.camlib.impl.v1_20_R3.TimelineImpl;
 import de.enwaffel.mc.camlib.nms.NMS;
 import de.enwaffel.mc.camlib.nms.NMSVersion;
 import io.netty.channel.ChannelHandler;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +25,8 @@ public final class CamLib implements CameraLibrary {
     public static NMS nms;
     public static List<Animatable> ANIMATABLES;
     public static List<Animatable> toRemove;
+    public static CamLibConfig config;
+    public static HashMap<Player, Timer> LOCKED_PLAYERS = new HashMap<>();
 
     public static void init() {
         if (initialized) throw new IllegalStateException("Already initialized!");
@@ -53,20 +53,10 @@ public final class CamLib implements CameraLibrary {
         HANDLERS = new HashMap<>();
         ANIMATABLES = new ArrayList<>();
         toRemove = new ArrayList<>();
+        config = new CamLibConfig();
 
         initialized = true;
-        timer.schedule(new TimerTask() {
-
-            long last = System.currentTimeMillis();
-
-            @Override
-            public void run() {
-                long now = System.currentTimeMillis();
-                float delta = now - last;
-                last = now;
-                update(Math.max(1.0f, delta));
-            }
-        }, 0, 1);
+        startTimer();
     }
 
     private static void update(float delta) {
@@ -78,13 +68,26 @@ public final class CamLib implements CameraLibrary {
         }
     }
 
+    static void startTimer() {
+        timer.schedule(new TimerTask() {
+
+            long last = System.currentTimeMillis();
+
+            @Override
+            public void run() {
+                long now = System.currentTimeMillis();
+                float delta = now - last;
+                last = now;
+                update(Math.max(1.0f, delta));
+            }
+        }, 0, config.updateRate);
+    }
+
     public static void disable() {
         if (!initialized) throw new IllegalStateException("Not initialized! Use CameraLibrary.getInstance() to initialize!");
         initialized = false;
 
-        for (Map.Entry<Player, ChannelHandler> set : HANDLERS.entrySet()) {
-
-        }
+        nms.disable();
 
         manager.killAll();
         timer.cancel();
@@ -102,6 +105,40 @@ public final class CamLib implements CameraLibrary {
     @Override
     public Animation.Builder newAnimation() {
         return new Animation.Builder();
+    }
+
+    @Override
+    public Config getConfig() {
+        return config;
+    }
+
+    @Override
+    public void lockPlayer(Player player) {
+        if (LOCKED_PLAYERS.containsKey(player)) return;
+        if (config.blockPackets) nms.disableMovementPackets(player);
+        Location location = player.getLocation().clone();
+
+        Timer t = new Timer();
+        t.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                nms.sendPlayerPositionPacket(player, (float) location.getX(), (float) location.getY(), (float) location.getZ(), location.getYaw(), location.getPitch());
+            }
+        }, 0, config.updateRate);
+
+        LOCKED_PLAYERS.put(player, t);
+    }
+
+    @Override
+    public void unlockPlayer(Player player) {
+        if (!LOCKED_PLAYERS.containsKey(player)) return;
+        if (config.blockPackets) nms.enableMovementPackets(player);
+        LOCKED_PLAYERS.remove(player).cancel();
+    }
+
+    @Override
+    public boolean isPlayerLocked(Player player) {
+        return LOCKED_PLAYERS.containsKey(player);
     }
 
 }

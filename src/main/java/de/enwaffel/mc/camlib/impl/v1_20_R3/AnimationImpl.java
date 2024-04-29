@@ -24,9 +24,16 @@ public class AnimationImpl implements Animation {
 
     private final Player player;
     private final Tween tween;
+    private final boolean blockPackets;
 
     public AnimationImpl(Player player, Location start, Location end, List<Location> points, Float ms, Easing ease, Boolean linear) {
         this.player = player;
+
+        blockPackets = CamLib.config.blockPackets;
+
+        if (CamLib.LOCKED_PLAYERS.containsKey(player)) {
+            throw new IllegalStateException("Cannot create animation while " + player.getName() + " is locked!");
+        }
 
         x = (float) start.getX();
         y = (float) start.getY();
@@ -57,7 +64,7 @@ public class AnimationImpl implements Animation {
     public void play() {
         tween.start(CamLib.manager);
         CamLib.ANIMATABLES.add(this);
-        CamLib.nms.disableMovementPackets(player);
+        if (blockPackets) CamLib.nms.disableMovementPackets(player);
     }
 
     @Override
@@ -65,7 +72,7 @@ public class AnimationImpl implements Animation {
         tween.kill();
         CamLib.ANIMATABLES.remove(this);
         Bukkit.getScheduler().scheduleSyncDelayedTask(Bukkit.getPluginManager().getPlugins()[0], () -> {
-            CamLib.nms.enableMovementPackets(player);
+            if (blockPackets) CamLib.nms.enableMovementPackets(player);
             player.teleport(new Location(player.getWorld(), x, y, z, yaw, pitch));
         });
     }
@@ -86,7 +93,7 @@ public class AnimationImpl implements Animation {
         if (tween.isFinished()) {
             CamLib.toRemove.add(this);
             Bukkit.getScheduler().scheduleSyncDelayedTask(Bukkit.getPluginManager().getPlugins()[0], () -> {
-                CamLib.nms.enableMovementPackets(player);
+                if (blockPackets) CamLib.nms.enableMovementPackets(player);
                 player.teleport(new Location(player.getWorld(), x, y, z, yaw, pitch));
             });
         }

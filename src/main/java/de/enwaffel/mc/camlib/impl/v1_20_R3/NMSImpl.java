@@ -3,14 +3,15 @@ package de.enwaffel.mc.camlib.impl.v1_20_R3;
 import de.enwaffel.mc.camlib.nms.NMS;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 public class NMSImpl implements NMS {
@@ -18,6 +19,7 @@ public class NMSImpl implements NMS {
     private final Class<?> positionPacketClass;
     private final Class<?> packetClass;
     private final HashMap<Player, PlayerConnection> CONNECTION_CACHE = new HashMap<>();
+    private final List<Player> DISABLED_PLAYERS = new ArrayList<>();
 
     public NMSImpl() {
         String nmsPackage = "net.minecraft";
@@ -67,6 +69,11 @@ public class NMSImpl implements NMS {
     }
 
     @Override
+    public void disable() {
+        DISABLED_PLAYERS.forEach(this::enableMovementPackets);
+    }
+
+    @Override
     public void disableMovementPackets(Player player) {
         try {
             PlayerConnection playerConnection = getPlayerConnection(player);
@@ -88,6 +95,8 @@ public class NMSImpl implements NMS {
                     super.channelRead(ctx, msg);
                 }
             });
+
+            DISABLED_PLAYERS.add(player);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -108,6 +117,8 @@ public class NMSImpl implements NMS {
             if (channel.pipeline().get("injected") != null) {
                 channel.pipeline().remove("injected");
             }
+
+            DISABLED_PLAYERS.remove(player);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }

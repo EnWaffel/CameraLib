@@ -1,6 +1,12 @@
 main: de.enwaffel.mc.camlib.plugin.CameraLibraryPlugin
 name: CameraLibrary
+description: A Bukkit implementation for the CameraLib API. Uses Universal Tween Engine and DisplayLib.
 version: 1.0
 api-version: 1.20
 authors:
   - EnWaffel
+commands:
+  camlib:
+    description: Create, play and delete animations ingame.
+  camlock:
+    description: Lock / Unlock a player.

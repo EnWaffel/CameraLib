@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public interface Animation extends Animatable {
@@ -15,7 +16,7 @@ public interface Animation extends Animatable {
 
         private Location start;
         private Location end;
-        private List<Location> points = new ArrayList<>();
+        private final List<Location> points = new ArrayList<>();
         private float ms;
         private Easing easing;
         private Player player;
@@ -46,6 +47,11 @@ public interface Animation extends Animatable {
 
         public Builder points(Location... points) {
             this.points.addAll(List.of(points));
+            return this;
+        }
+
+        public Builder points(Collection<Location> points) {
+            this.points.addAll(points);
             return this;
         }
 

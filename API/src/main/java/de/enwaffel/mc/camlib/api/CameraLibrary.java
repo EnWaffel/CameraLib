@@ -1,5 +1,7 @@
 package de.enwaffel.mc.camlib.api;
 
+import org.bukkit.entity.Player;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
@@ -33,5 +35,9 @@ public interface CameraLibrary {
     Timeline.Builder newTimeline();
 
     Animation.Builder newAnimation();
+    Config getConfig();
+    void lockPlayer(Player player);
+    void unlockPlayer(Player player);
+    boolean isPlayerLocked(Player player);
 
 }
