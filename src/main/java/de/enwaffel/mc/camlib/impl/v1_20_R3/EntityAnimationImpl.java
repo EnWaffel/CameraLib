@@ -3,16 +3,18 @@ package de.enwaffel.mc.camlib.impl.v1_20_R3;
 import aurelienribon.tweenengine.Tween;
 import aurelienribon.tweenengine.TweenPaths;
 import de.enwaffel.mc.camlib.CamLib;
-import de.enwaffel.mc.camlib.api.Animation;
+import de.enwaffel.mc.camlib.api.EntityAnimation;
 import de.enwaffel.mc.camlib.api.tween.Easing;
 import de.enwaffel.mc.camlib.impl.Utils;
+import de.enwaffel.mc.camlib.nms.NMS;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.util.List;
 
-public class AnimationImpl implements Animation {
+public class EntityAnimationImpl implements EntityAnimation {
 
     protected float x;
     protected float y;
@@ -20,18 +22,18 @@ public class AnimationImpl implements Animation {
     protected float yaw;
     protected float pitch;
 
-    private final Player player;
+    private final Entity entity;
     private final Tween tween;
-    private final boolean blockPackets;
+    private final NMS.EntityLocFields locFields;
 
-    public AnimationImpl(Player player, Location start, Location end, List<Location> points, Float ms, Easing ease, Boolean linear) {
-        this.player = player;
+    public EntityAnimationImpl(Entity entity, Location start, Location end, List<Location> points, Float ms, Easing ease, Boolean linear) {
+        this.entity = entity;
 
-        blockPackets = CamLib.config.blockPackets;
-
-        if (CamLib.LOCKED_PLAYERS.containsKey(player)) {
-            throw new IllegalStateException("Cannot create animation while " + player.getName() + " is locked!");
+        if (entity instanceof Player) {
+            throw new IllegalArgumentException("Entity cannot be a player!");
         }
+
+        locFields = CamLib.nms.getEntityLocationFields(entity);
 
         x = (float) start.getX();
         y = (float) start.getY();
@@ -62,20 +64,16 @@ public class AnimationImpl implements Animation {
     public void play() {
         tween.start(CamLib.manager);
         CamLib.ANIMATABLES.add(this);
-        CamLib.ANIMATING_PLAYERS.add(player);
-        if (blockPackets) CamLib.nms.disableMovementPackets(player);
+        CamLib.ANIMATING_ENTITIES.add(entity);
     }
 
     @Override
     public void stop() {
         tween.kill();
         CamLib.ANIMATABLES.remove(this);
-        CamLib.ANIMATING_PLAYERS.remove(player);
-        CamLib.nms.clearCacheForPlayer(player);
-        Bukkit.getScheduler().scheduleSyncDelayedTask(Bukkit.getPluginManager().getPlugins()[0], () -> {
-            if (blockPackets) CamLib.nms.enableMovementPackets(player);
-            player.teleport(new Location(player.getWorld(), x, y, z, yaw, pitch));
-        });
+        CamLib.nms.clearCacheForEntity(entity);
+        CamLib.ANIMATING_ENTITIES.remove(entity);
+        Bukkit.getScheduler().scheduleSyncDelayedTask(Bukkit.getPluginManager().getPlugins()[0], () -> entity.teleport(new Location(entity.getWorld(), x, y, z, yaw, pitch)));
     }
 
     @Override
@@ -90,15 +88,13 @@ public class AnimationImpl implements Animation {
 
     @Override
     public void update(float delta) {
-        CamLib.nms.sendPlayerPositionPacket(player, x, y, z, yaw, pitch);
+        CamLib.nms.setEntityPosition(locFields, x, y, z, yaw, pitch);
+        CamLib.nms.sendEntityPositionPacket(entity);
         if (tween.isFinished()) {
+            CamLib.ANIMATING_ENTITIES.remove(entity);
+            CamLib.nms.clearCacheForEntity(entity);
             CamLib.toRemove.add(this);
-            CamLib.ANIMATING_PLAYERS.remove(player);
-            CamLib.nms.clearCacheForPlayer(player);
-            Bukkit.getScheduler().scheduleSyncDelayedTask(Bukkit.getPluginManager().getPlugins()[0], () -> {
-                if (blockPackets) CamLib.nms.enableMovementPackets(player);
-                player.teleport(new Location(player.getWorld(), x, y, z, yaw, pitch));
-            });
+            Bukkit.getScheduler().scheduleSyncDelayedTask(Bukkit.getPluginManager().getPlugins()[0], () -> entity.teleport(new Location(entity.getWorld(), x, y, z, yaw, pitch)));
         }
     }
 

@@ -4,11 +4,11 @@ import aurelienribon.tweenengine.Tween;
 import aurelienribon.tweenengine.TweenAccessor;
 import aurelienribon.tweenengine.TweenManager;
 import de.enwaffel.mc.camlib.api.*;
-import de.enwaffel.mc.camlib.impl.v1_20_R3.TimelineImpl;
 import de.enwaffel.mc.camlib.nms.NMS;
 import de.enwaffel.mc.camlib.nms.NMSVersion;
 import io.netty.channel.ChannelHandler;
 import org.bukkit.Location;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.InvocationTargetException;
@@ -27,6 +27,8 @@ public final class CamLib implements CameraLibrary {
     public static List<Animatable> toRemove;
     public static CamLibConfig config;
     public static HashMap<Player, Timer> LOCKED_PLAYERS = new HashMap<>();
+    public static List<Player> ANIMATING_PLAYERS = new ArrayList<>();
+    public static List<Entity> ANIMATING_ENTITIES = new ArrayList<>();
 
     public static void init() {
         if (initialized) throw new IllegalStateException("Already initialized!");
@@ -37,10 +39,13 @@ public final class CamLib implements CameraLibrary {
         try {
             ImplClasses.TIMELINE_CLASS = (Class<? extends Timeline>) Class.forName(implPackage + ".TimelineImpl");
             ImplClasses.ANIMATION_CLASS = (Class<? extends Animation>) Class.forName(implPackage + ".AnimationImpl");
+            ImplClasses.ENTITY_ANIMATION_CLASS = (Class<? extends EntityAnimation>) Class.forName(implPackage + ".EntityAnimationImpl");
             nms = (NMS) Class.forName(implPackage + ".NMSImpl").getDeclaredConstructor().newInstance();
 
             Class<?> clazz = Class.forName(implPackage + ".AnimationAccessor");
+            Class<?> clazz1 = Class.forName(implPackage + ".EntityAnimationAccessor");
             Tween.registerAccessor(ImplClasses.ANIMATION_CLASS, (TweenAccessor<?>) clazz.getDeclaredConstructor().newInstance());
+            Tween.registerAccessor(ImplClasses.ENTITY_ANIMATION_CLASS, (TweenAccessor<?>) clazz1.getDeclaredConstructor().newInstance());
 
         } catch (ClassNotFoundException | InvocationTargetException | InstantiationException | IllegalAccessException |
                  NoSuchMethodException e) {
@@ -98,13 +103,18 @@ public final class CamLib implements CameraLibrary {
     }
 
     @Override
-    public TimelineImpl.Builder newTimeline() {
+    public Timeline.Builder newTimeline() {
         return new Timeline.Builder();
     }
 
     @Override
     public Animation.Builder newAnimation() {
         return new Animation.Builder();
+    }
+
+    @Override
+    public EntityAnimation.Builder newEntityAnimation() {
+        return new EntityAnimation.Builder();
     }
 
     @Override
@@ -139,6 +149,16 @@ public final class CamLib implements CameraLibrary {
     @Override
     public boolean isPlayerLocked(Player player) {
         return LOCKED_PLAYERS.containsKey(player);
+    }
+
+    @Override
+    public boolean isInAnimation(Player player) {
+        return ANIMATING_PLAYERS.contains(player);
+    }
+
+    @Override
+    public boolean isInAnimation(Entity entity) {
+        return ANIMATING_ENTITIES.contains(entity);
     }
 
 }
